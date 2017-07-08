@@ -301,6 +301,7 @@ class PromptContainer(QWidget):
         classes = {
             usertypes.PromptMode.yesno: YesNoPrompt,
             usertypes.PromptMode.text: LineEditPrompt,
+            usertypes.PromptMode.double_text: DoubleLineEditPrompt,
             usertypes.PromptMode.user_pwd: AuthenticationPrompt,
             usertypes.PromptMode.download: DownloadFilenamePrompt,
             usertypes.PromptMode.alert: AlertPrompt,
@@ -541,6 +542,33 @@ class LineEditPrompt(_BasePrompt):
     def accept(self, value=None):
         text = value if value is not None else self._lineedit.text()
         self.question.answer = text
+        return True
+
+    def _allowed_commands(self):
+        return [('prompt-accept', 'Accept'), ('leave-mode', 'Abort')]
+
+
+class DoubleLineEditPrompt(_BasePrompt):
+
+    """A prompt for a single text value."""
+
+    def __init__(self, question, parent=None):
+        super().__init__(question, parent)
+        self._lineedit1 = LineEdit(self)
+        self._lineedit2 = LineEdit(self)
+        self._init_texts(question)
+        self._vbox.addWidget(self._lineedit1)
+        self._vbox.addWidget(self._lineedit2)
+        if question.default:
+            self._lineedit1.setText(question.default[0])
+            self._lineedit2.setText(question.default[1])
+        self.setFocusProxy(self._lineedit1)
+        self._init_key_label()
+
+    def accept(self, value=None):
+        text1 = value if value is not None else self._lineedit1.text()
+        text2 = value if value is not None else self._lineedit2.text()
+        self.question.answer = (text1, text2)
         return True
 
     def _allowed_commands(self):

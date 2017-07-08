@@ -100,6 +100,21 @@ class QuickmarkCompletionModel(base.BaseCompletionModel):
             self.new_item(cat, qm_name, qm_url)
 
 
+class TagmarkCompletionModel(base.BaseCompletionModel):
+
+    """A CompletionModel filled with all tagmarks."""
+
+    # https://github.com/qutebrowser/qutebrowser/issues/545
+    # pylint: disable=abstract-method
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        cat = self.new_category("Tagmarks")
+        tagmarks = objreg.get('tagmark-manager').marks.items()
+        for tm_url, tm_mark in tagmarks:
+            self.new_item(cat, tm_url, tm_mark.title, ", ".join(tm_mark.tags))
+
+
 class BookmarkCompletionModel(base.BaseCompletionModel):
 
     """A CompletionModel filled with all bookmarks."""

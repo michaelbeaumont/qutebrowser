@@ -449,6 +449,10 @@ def _init_modules(args, crash_handler):
     bookmark_manager = urlmarks.BookmarkManager(qApp)
     objreg.register('bookmark-manager', bookmark_manager)
 
+    log.init.debug("Initializing tagmarks...")
+    tagmark_manager = urlmarks.TagmarkManager(qApp)
+    objreg.register('tagmark-manager', tagmark_manager)
+
     log.init.debug("Initializing cookies...")
     cookie_jar = cookies.CookieJar(qApp)
     ram_cookie_jar = cookies.RAMCookieJar(qApp)

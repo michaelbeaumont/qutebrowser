@@ -92,6 +92,17 @@ def init_quickmark_completions():
     _instances[usertypes.Completion.quickmark_by_name] = model
 
 
+def init_tagmark_completions():
+    """Initialize tagmark completion models."""
+    log.completion.debug("Initializing tagmark completion.")
+    try:
+        _instances[usertypes.Completion.tagmark_by_name].deleteLater()
+    except KeyError:
+        pass
+    model = miscmodels.TagmarkCompletionModel()
+    _instances[usertypes.Completion.tagmark_by_name] = model
+
+
 def init_bookmark_completions():
     """Initialize bookmark completion models."""
     log.completion.debug("Initializing bookmark completion.")
@@ -130,6 +141,7 @@ INITIALIZERS = {
     usertypes.Completion.option: _init_setting_completions,
     usertypes.Completion.value: _init_setting_completions,
     usertypes.Completion.quickmark_by_name: init_quickmark_completions,
+    usertypes.Completion.tagmark_by_name: init_tagmark_completions,
     usertypes.Completion.bookmark_by_url: init_bookmark_completions,
     usertypes.Completion.sessions: init_session_completion,
     usertypes.Completion.bind: _init_bind_completion,
@@ -174,6 +186,10 @@ def init():
     quickmark_manager = objreg.get('quickmark-manager')
     quickmark_manager.changed.connect(
         functools.partial(update, [usertypes.Completion.quickmark_by_name]))
+
+    tagmark_manager = objreg.get('tagmark-manager')
+    tagmark_manager.changed.connect(
+        functools.partial(update, [usertypes.Completion.tagmark_by_name]))
 
     bookmark_manager = objreg.get('bookmark-manager')
     bookmark_manager.changed.connect(

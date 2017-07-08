@@ -221,7 +221,7 @@ class NeighborList(collections.abc.Sequence):
 
 
 # The mode of a Question.
-PromptMode = enum('PromptMode', ['yesno', 'text', 'user_pwd', 'alert',
+PromptMode = enum('PromptMode', ['yesno', 'text', 'double_text', 'user_pwd', 'alert',
                                  'download'])
 
 
@@ -238,7 +238,7 @@ KeyMode = enum('KeyMode', ['normal', 'hint', 'command', 'yesno', 'prompt',
 
 # Available command completions
 Completion = enum('Completion', ['command', 'section', 'option', 'value',
-                                 'helptopic', 'quickmark_by_name',
+                                 'helptopic', 'quickmark_by_name', 'tagmark_by_name',
                                  'bookmark_by_url', 'url', 'tab', 'sessions',
                                  'bind'])
 

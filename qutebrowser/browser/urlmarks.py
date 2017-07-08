@@ -30,6 +30,7 @@ import html
 import os.path
 import functools
 import collections
+import re
 
 from PyQt5.QtCore import pyqtSignal, QUrl, QObject
 
@@ -122,6 +123,134 @@ class UrlMarkManager(QObject):
         del self.marks[key]
         self.changed.emit()
         self.removed.emit(key)
+
+
+class Tagmark:
+    title = ""
+    tags = []
+
+    def __init__(self, title, tags):
+        self.title = title
+        self.tags = tags
+
+    def serialize(self):
+        return " ".join(('"'+self.title+'"', " ".join(self.tags)))
+
+    def parse(line):
+        regex = r'(\S+) "(.+)" ?(\S*)'
+        try:
+            url, title, tags = re.match(regex, line).groups()
+        except:
+            message.error("Invalid tagmark '{}'".format(line))
+        else:
+            return (url, Tagmark(title, tags.split()))
+
+
+class TagmarkManager(UrlMarkManager):
+    """Manager for quickmarks.
+
+    The primary key for quickmarks is their *name*, this means:
+
+        - self.marks maps names to URLs.
+        - changed gets emitted with the name as first argument and the URL as
+          second argument.
+        - removed gets emitted with the name as argument.
+    """
+
+    def _init_lineparser(self):
+        self._lineparser = lineparser.LineParser(
+            standarddir.config(), 'tagmarks', parent=self)
+
+    def _init_savemanager(self, save_manager):
+        filename = os.path.join(standarddir.config(), 'tagmarks')
+        save_manager.add_saveable('tagmark-manager', self.save, self.changed,
+                                  filename=filename)
+
+    def _parse_line(self, line):
+        maybeParse = Tagmark.parse(line)
+        if maybeParse is not None:
+            self.marks[maybeParse[0]] = maybeParse[1]
+
+    def save(self):
+        """Save the marks to disk."""
+        self._lineparser.data = [
+            ' '.join((url, mark.serialize())) for url, mark in self.marks.items()
+        ]
+        self._lineparser.save()
+
+    def prompt_save(self, url, title):
+        """Prompt for a new tagmark name to be added and add it.
+
+        Args:
+            url: The quickmark url as a QUrl.
+        """
+        if not url.isValid():
+            urlutils.invalid_url_error(url, "save quickmark")
+            return
+        tags = []
+        urlstr = url.toString(QUrl.RemovePassword | QUrl.FullyEncoded)
+        if urlstr in self.marks:
+            tags = self.marks[urlstr].tags
+        message.ask_async(
+            "Add quickmark:", usertypes.PromptMode.double_text,
+            functools.partial(self.tagmark_add, urlstr),
+            text="Please enter a quickmark name for<br/><b>{}</b>".format(
+                html.escape(url.toDisplayString())),
+            default=(title, " ".join(tags))
+        )
+
+    @cmdutils.register(instance='tagmark-manager')
+    def tagmark_add(self, url, mark_inp):
+        """Add a new tagmark.
+
+        You can view all saved tagmark on the
+        link:qute://bookmarks[bookmarks page].
+
+        Args:
+            url: The url to add as quickmark.
+            name: The name for the new quickmark.
+        """
+        # We don't raise cmdexc.CommandError here as this can be called async
+        # via prompt_save.
+        (title, tags) = mark_inp
+        if not title:
+            message.error("Can't set mark with empty name!")
+            return
+        if not url:
+            message.error("Can't set mark with empty URL!")
+            return
+        tags = tags or []
+
+        def set_mark():
+            """Really set the quickmark."""
+            self.marks[url] = Tagmark(title, tags.split())
+            self.changed.emit()
+            self.added.emit(title, url)
+            log.misc.debug("Added quickmark {} for {}".format(title, url))
+
+        if url in self.marks:
+            message.confirm_async(
+                title="Override existing quickmark?",
+                yes_action=set_mark, default=True)
+        else:
+            set_mark()
+
+    def get(self, search_string):
+        """Get the URL of the quickmark named name as a QUrl."""
+        urlstr = None
+        for (url, mark) in self.marks.items:
+            if search_string in mark.title or search_string in mark.tags:
+                urlstr = url
+
+        if urlstr is None:
+            raise DoesNotExistError(
+                "Quickmark '{}' does not exist!".format(search_string))
+        try:
+            url = urlutils.fuzzy_url(urlstr, do_search=False)
+        except urlutils.InvalidUrlError as e:
+            raise InvalidUrlError(
+                "Invalid URL for quickmark {}: {}".format(search_string, str(e)))
+        return url
 
 
 class QuickmarkManager(UrlMarkManager):

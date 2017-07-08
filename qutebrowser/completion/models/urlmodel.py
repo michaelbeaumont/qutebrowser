@@ -45,11 +45,20 @@ class UrlCompletionModel(base.BaseCompletionModel):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.columns_to_filter = [self.URL_COLUMN, self.TEXT_COLUMN]
+        self.columns_to_filter = [self.URL_COLUMN, self.TEXT_COLUMN, self.TIME_COLUMN]
 
+        self._tagmark_cat = self.new_category("Tagmarks")
         self._quickmark_cat = self.new_category("Quickmarks")
         self._bookmark_cat = self.new_category("Bookmarks")
         self._history_cat = self.new_category("History")
+
+        tagmark_manager = objreg.get('tagmark-manager')
+        tagmarks = tagmark_manager.marks.items()
+        for tm_url, tm_mark in tagmarks:
+            self.new_item(self._tagmark_cat, tm_url, tm_mark.title, ", ".join(tm_mark.tags))
+        tagmark_manager.added.connect(
+            lambda name, url: self.new_item(self._tagmark_cat, url, name))
+        tagmark_manager.removed.connect(self.on_tagmark_removed)
 
         quickmark_manager = objreg.get('quickmark-manager')
         quickmarks = quickmark_manager.marks.items()
@@ -160,6 +169,15 @@ class UrlCompletionModel(base.BaseCompletionModel):
         self._remove_item(name, self._quickmark_cat, self.TEXT_COLUMN)
 
     @pyqtSlot(str)
+    def on_tagmark_removed(self, name):
+        """Called when a tagmark has been removed by the user.
+
+        Args:
+            name: The name of the tagmark which has been removed.
+        """
+        self._remove_item(name, self._tagmark_cat, self.TEXT_COLUMN)
+
+    @pyqtSlot(str)
     def on_bookmark_removed(self, url):
         """Called when a bookmark has been removed by the user.
 
@@ -190,3 +208,9 @@ class UrlCompletionModel(base.BaseCompletionModel):
             qtutils.ensure_valid(sibling)
             name = sibling.data()
             quickmark_manager.delete(name)
+        elif category.data() == 'Tagmarks':
+            tagmark_manager = objreg.get('tagmark-manager')
+            sibling = index.sibling(index.row(), self.TEXT_COLUMN)
+            qtutils.ensure_valid(sibling)
+            name = sibling.data()
+            tagmark_manager.delete(name)

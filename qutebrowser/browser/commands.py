@@ -1234,6 +1234,31 @@ class CommandDispatcher:
             raise cmdexc.CommandError(e)
 
     @cmdutils.register(instance='command-dispatcher', scope='window')
+    def tagmark_save(self):
+        """Save the current page as a quickmark."""
+        tagmark_manager = objreg.get('tagmark-manager')
+        tagmark_manager.prompt_save(self._current_url(), self._current_title())
+
+    @cmdutils.register(instance='command-dispatcher', scope='window',
+                       maxsplit=0)
+    @cmdutils.argument('url',
+                       completion=usertypes.Completion.tagmark_by_name)
+    def tagmark_load(self, url, tab=False, bg=False, window=False):
+        """Load a tagmark.
+
+        Args:
+            url: The url the quickmark to load.
+            tab: Load the quickmark in a new tab.
+            bg: Load the quickmark in a new background tab.
+            window: Load the quickmark in a new window.
+        """
+        try:
+            url = objreg.get('tagmark-manager').get(url)
+        except urlmarks.Error as e:
+            raise cmdexc.CommandError(str(e))
+        self._open(url, tab, bg, window)
+
+    @cmdutils.register(instance='command-dispatcher', scope='window')
     def quickmark_save(self):
         """Save the current page as a quickmark."""
         quickmark_manager = objreg.get('quickmark-manager')
